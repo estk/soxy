@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
-use std::net::SocketAddr;
 use toml::Value;
 
 /// Read the `config.toml` at `path`.
