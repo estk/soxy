@@ -1,5 +1,5 @@
 docker:
-  stage: docker
+  stage: build
   only:
     - "master"
   image: docker:latest
