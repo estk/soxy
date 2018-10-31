@@ -1,0 +1,6 @@
+listen_addr = "0.0.0.0:80"
+
+[domains]
+"root.com" = 8000
+"sub1.root.com" = 8001
+"sub2.root.com" = 8002

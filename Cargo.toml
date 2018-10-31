@@ -1,0 +1,12 @@
+[package]
+name = "soxy"
+version = "0.1.0"
+authors = ["Evan Simmons <esims89@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+hyper = "0.12.13"
+pretty_env_logger = "0.2.5"
+toml = "0.4.8"
+lazy_static = "1.1.0"
+log = "0.4.6"
