@@ -19,6 +19,7 @@ fn main() {
     // to handle requests for that specific connection.
     let new_service = move || {
         let client = client_main.clone();
+        // TODO: is this a leak?
         let dref = domains.clone();
         // This is the `Service` that will handle the connection.
         // `service_fn_ok` is a helper to convert a function that
