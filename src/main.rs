@@ -30,9 +30,14 @@ fn main() {
                 .expect("must have host header")
                 .to_str()
                 .expect("must have host header");
-            trace!("sub_domain: {}", domain);
+            // if failure, try *.<domain>
+            trace!("domain: {}", domain);
 
-            let sock_addr = dref.get(domain).expect("domain not found in proxy list");
+            let port = dref
+                .get(domain)
+                .expect("domain not found in proxy list")
+                .to_owned();
+            let sock_addr: SocketAddr = ([127, 0, 0, 1], port).into();
             trace!("proxying req to {} to {}", domain, sock_addr);
 
             let uri_string = format!(
