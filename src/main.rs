@@ -39,13 +39,10 @@ fn main() {
                 .expect("domain not found in proxy list")
                 .to_owned();
             let sock_addr: SocketAddr = ([127, 0, 0, 1], port).into();
-            trace!("proxying req to {} to {}", domain, sock_addr);
+            trace!("proxying req from {} to {}", domain, sock_addr);
 
-            let uri_string = format!(
-                "http://{}/{}",
-                sock_addr,
-                req.uri().path_and_query().map(|x| x.as_str()).unwrap_or("")
-            );
+            let path = req.uri().path_and_query().map(|x| x.as_str()).unwrap_or("");
+            let uri_string = format!("http://{}{}", sock_addr, path,);
             let uri = uri_string.parse().unwrap();
             *req.uri_mut() = uri;
             client.request(req)
