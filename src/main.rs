@@ -2,16 +2,21 @@
 #![warn(unused)]
 mod config;
 use config::read_config;
+use futures::future;
+use futures::future::IntoFuture;
 use hyper::rt::{self, Future};
 use hyper::service::service_fn;
-use hyper::{Client, Server};
-use log::trace;
+use hyper::Body;
+use hyper::{Client, Request, Response, Server, Uri};
+use log::{debug, trace};
+use std::collections::HashMap;
+use std::error::Error;
 use std::net::SocketAddr;
 
 fn main() {
     pretty_env_logger::init();
     let in_addr = ([0, 0, 0, 0], 80).into();
-    let domains = read_config("config.toml").expect("Unable to access config.toml");
+    let domains_main = read_config("config.toml").expect("Unable to access config.toml");
 
     let client_main = Client::new();
 
@@ -20,32 +25,24 @@ fn main() {
     let new_service = move || {
         let client = client_main.clone();
         // TODO: is this a leak?
-        let dref = domains.clone();
+        let domains = domains_main.clone();
         // This is the `Service` that will handle the connection.
         // `service_fn_ok` is a helper to convert a function that
         // returns a Response into a `Service`.
-        service_fn(move |mut req| {
-            let domain = req
-                .headers()
-                .get("host")
-                .expect("must have host header")
-                .to_str()
-                .expect("must have host header");
-            // if failure, try *.<domain>
-            trace!("domain: {}", domain);
-
-            let port = dref
-                .get(domain)
-                .expect("domain not found in proxy list")
-                .to_owned();
-            let sock_addr: SocketAddr = ([127, 0, 0, 1], port).into();
-            trace!("proxying req from {} to {}", domain, sock_addr);
-
-            let path = req.uri().path_and_query().map(|x| x.as_str()).unwrap_or("");
-            let uri_string = format!("http://{}{}", sock_addr, path,);
-            let uri = uri_string.parse().unwrap();
-            *req.uri_mut() = uri;
-            client.request(req)
+        service_fn(move |mut req| match translate_uri(&domains, &req) {
+            Err(err) => {
+                debug!("{}", err);
+                let res = Response::builder()
+                    .status(400)
+                    .body(Body::default())
+                    .unwrap();
+                Box::new(future::ok(res))
+                    as Box<Future<Item = Response<Body>, Error = hyper::Error> + Send>
+            }
+            Ok(uri) => {
+                *req.uri_mut() = uri;
+                Box::new(client.request(req).into_future())
+            }
         })
     };
 
@@ -56,4 +53,26 @@ fn main() {
     println!("Listening on http://{}", in_addr);
 
     rt::run(server);
+}
+
+fn translate_uri<T>(
+    domains: &HashMap<String, u16>,
+    req: &Request<T>,
+) -> Result<Uri, Box<dyn Error>> {
+    let domain = req
+        .headers()
+        .get("host")
+        .ok_or("Host header not present".to_string())?
+        .to_str()?;
+
+    let port = domains
+        .get(domain)
+        .ok_or("Domain unrecognized".to_string())?
+        .to_owned();
+    let socket_addr: SocketAddr = ([127, 0, 0, 1], port).into();
+    let path = req.uri().path_and_query().map(|x| x.as_str()).unwrap_or("");
+    let uri_string = format!("http://{}{}", socket_addr, path,);
+    uri_string
+        .parse::<Uri>()
+        .map_err(|e| Box::new(e) as Box<Error>)
 }
