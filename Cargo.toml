@@ -1,13 +1,17 @@
 [package]
 name = "soxy"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Evan Simmons <esims89@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-hyper = "0.12.13"
 pretty_env_logger = "0.2.5"
 toml = "0.4.8"
 lazy_static = "1.1.0"
 log = "0.4.6"
-futures = "0.1.25"
+serde_derive = "1.0.92"
+actix-web = "1.0.1"
+rand = {git="https://github.com/rust-random/rand.git"} 
+serde = "1.0.92"
+futures = "0.1.27"
+url = "1.7.2"
