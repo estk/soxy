@@ -15,3 +15,4 @@ rand = {git="https://github.com/rust-random/rand.git"}
 serde = "1.0.92"
 futures = "0.1.27"
 url = "1.7.2"
+snafu = "0.4.1"
