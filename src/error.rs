@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 use snafu::Snafu;
 use std::io;
 use url;
+use http;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -30,6 +31,9 @@ pub enum Error {
 
     #[snafu(display("Host header was empty"))]
     HostEmpty,
+
+    #[snafu(display("Host header was invalid"))]
+    HostReadError{source: http::header::ToStrError},
 
     #[snafu(display("Host not found in config {}", host))]
     HostNotFound{host: String},

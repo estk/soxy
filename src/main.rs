@@ -1,13 +1,12 @@
 mod config;
 mod error;
 
-use futures::{Future, IntoFuture};
 use crate::config::Config;
-
 use actix_web::client::Client;
 use actix_web::error as actix_error;
 use actix_web::{middleware, web, App, HttpRequest, HttpResponse, HttpServer};
 use error::{Error, Result};
+use futures::{Future, IntoFuture};
 use std::net::SocketAddr;
 use url::Url;
 
@@ -65,30 +64,25 @@ fn forward(
         })
 }
 
-fn translate_pair(host: &str, path: &str, config: &Config) -> Result<Url> {
-    let out_port = config
-        .domains
-        .get(host)
-        .ok_or_else(|| Error::HostNotFound {
-            host: host.to_owned(),
-        })?
-        .to_owned();
-
-    let socket_addr: SocketAddr = (OUT_IP, out_port).into();
-    let url = format!("http://{}{}", socket_addr, path);
-    url.parse::<Url>()
-        .map_err(|source| Error::InvalidUpstreamUrl { url, source })
-}
-
 fn map_request(req: HttpRequest, config: &Config) -> Result<Url> {
     let host = req
         .headers()
         .get("host")
         .ok_or(Error::HostEmpty)?
         .to_str()
-        .unwrap();
+        .map_err(|source| Error::HostReadError { source })?;
 
     let path = req.uri().path_and_query().map(|x| x.as_str()).unwrap_or("");
 
-    translate_pair(host, path, config)
+    let out_port = config
+        .domains
+        .get(host)
+        .ok_or_else(|| Error::HostNotFound {
+            host: host.to_owned(),
+        })?;
+
+    let socket_addr: SocketAddr = (OUT_IP, out_port.to_owned()).into();
+    let url = format!("http://{}{}", socket_addr, path);
+    url.parse::<Url>()
+        .map_err(|source| Error::InvalidUpstreamUrl { url, source })
 }
